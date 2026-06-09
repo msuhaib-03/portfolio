@@ -9,29 +9,58 @@ import GlowButton from "@/components/ui/GlowButton";
 import { personal } from "@/data/personal";
 
 const contactLinks = [
-  { icon: Mail,       label: "Email",    value: personal.email,       href: `mailto:${personal.email}`, color: "text-cyber-purple" },
-  { icon: FaGithub,   label: "GitHub",   value: "@adrenalinejunkie03", href: personal.github,            color: "text-cyber-green"  },
-  { icon: FaLinkedin, label: "LinkedIn", value: "Hijaz Tariq",         href: personal.linkedin,           color: "text-cyber-cyan"   },
-  { icon: MapPin,     label: "Location", value: personal.location,     href: null,                        color: "text-amber-400"    },
+  { icon: Mail,       label: "Email",    value: personal.email,     href: `mailto:${personal.email}`, color: "text-cyber-purple" },
+  { icon: FaGithub,   label: "GitHub",   value: "@msuhaib-03",      href: personal.github,            color: "text-cyber-green"  },
+  { icon: FaLinkedin, label: "LinkedIn", value: personal.fullName,  href: personal.linkedin,           color: "text-cyber-cyan"   },
+  { icon: MapPin,     label: "Location", value: personal.location,  href: null,                        color: "text-amber-400"    },
 ];
+
+// ─── Formspree setup ──────────────────────────────────────────────────────
+// 1. Go to https://formspree.io → sign up free → New Form
+// 2. Copy your endpoint (looks like https://formspree.io/f/abcdefgh)
+// 3. On Vercel dashboard → Settings → Environment Variables
+//    Add:  NEXT_PUBLIC_FORMSPREE_ENDPOINT = https://formspree.io/f/YOUR_ID
+// 4. Redeploy — submissions will arrive at muhammadsuhaib2805@gmail.com
+const FORMSPREE = process.env.NEXT_PUBLIC_FORMSPREE_ENDPOINT ?? "";
 
 export default function Contact() {
   const [form,    setForm]    = useState({ name: "", email: "", message: "" });
   const [sent,    setSent]    = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    if (error) setError("");
   };
 
-  // NOTE: Wire this up to Formspree, Resend, or EmailJS before deploying
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    if (!FORMSPREE) {
+      setError("Contact form not configured yet — email me directly at " + personal.email);
+      return;
+    }
+
     setLoading(true);
-    // Simulate send (replace with real email service)
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setSent(true);
+    try {
+      const res = await fetch(FORMSPREE, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body:    JSON.stringify(form),
+      });
+      if (res.ok) {
+        setSent(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError((data as { error?: string }).error ?? "Something went wrong. Please email me directly.");
+      }
+    } catch {
+      setError("Network error. Please email me directly at " + personal.email);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -169,6 +198,13 @@ export default function Contact() {
                     className="w-full bg-surface-2/50 border border-white/8 rounded-lg px-4 py-3 text-white placeholder-muted text-sm focus:outline-none focus:border-cyber-green/60 focus:ring-1 focus:ring-cyber-green/30 transition-all duration-200 resize-none"
                   />
                 </div>
+
+                {/* Error message */}
+                {error && (
+                  <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+                    {error}
+                  </p>
+                )}
 
                 <GlowButton type="submit" size="lg" className="w-full" disabled={loading}>
                   {loading ? (
